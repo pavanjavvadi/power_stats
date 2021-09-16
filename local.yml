@@ -1,0 +1,88 @@
+version: '3'
+
+volumes:
+  local_postgres_data: {}
+  local_postgres_data_backups: {}
+
+services:
+  django:
+    build:
+      context: .
+      dockerfile: ./compose/local/django/Dockerfile
+    image: power_stats_local_django
+    container_name: django
+    depends_on:
+      - postgres
+    volumes:
+      - .:/app:z
+    env_file:
+      - ./.envs/.local/.django
+      - ./.envs/.local/.postgres
+    ports:
+      - "8000:8000"
+    networks:
+      - power_stats
+    command: /start
+
+
+  postgres:
+    build:
+      context: .
+      dockerfile: ./compose/production/postgres/Dockerfile
+    image: power_stats_production_postgres
+    container_name: postgres
+    volumes:
+      - local_postgres_data:/var/lib/postgresql/data:Z
+      - local_postgres_data_backups:/backups:z
+    env_file:
+      - ./.envs/.local/.postgres
+    networks:
+      - power_stats
+
+  docs:
+    image: power_stats_local_docs
+    container_name: docs
+    build:
+      context: .
+      dockerfile: ./compose/local/docs/Dockerfile
+    env_file:
+      - ./.envs/.local/.django
+    volumes:
+      - ./docs:/docs:z
+      - ./config:/app/config:z
+      - ./power_stats:/app/power_stats:z
+    ports:
+      - "7000:7000"
+    command: /start-docs
+  
+  zookeeper:
+    image: 'bitnami/zookeeper:latest'
+    container_name: zookeeper
+    ports:
+      - '2181:2181'
+    environment:
+      - ALLOW_ANONYMOUS_LOGIN=yes
+      - ZOOKEEPER_CLIENT_PORT=2181
+      - ZOOKEEPER_TICK_TIME=2000
+    networks:
+      - power_stats
+
+  kafka:
+    image: 'bitnami/kafka:latest'
+    container_name: kafka
+    ports:
+      - '9092:9092'
+    environment:
+      - KAFKA_BROKER_ID=1
+      - KAFKA_CFG_LISTENERS=PLAINTEXT://:9092
+      - KAFKA_CFG_ADVERTISED_LISTENERS=PLAINTEXT://127.0.0.1:9092
+      - KAFKA_CFG_ZOOKEEPER_CONNECT=zookeeper:2181
+      - ALLOW_PLAINTEXT_LISTENER=yes
+    depends_on:
+      - zookeeper
+    networks:
+      - power_stats
+
+networks:
+  power_stats:
+    driver: bridge
