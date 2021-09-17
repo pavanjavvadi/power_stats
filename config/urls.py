@@ -4,6 +4,7 @@ from django.contrib import admin
 from django.urls import include, path
 from django.views import defaults as default_views
 from django.views.generic import TemplateView
+import power_stats.stats_app.views
 from rest_framework.authtoken.views import obtain_auth_token
 
 urlpatterns = [
@@ -15,6 +16,7 @@ urlpatterns = [
     path(settings.ADMIN_URL, admin.site.urls),
     # User management
     path("users/", include("power_stats.users.urls", namespace="users")),
+    path("stats/", include("power_stats.stats_app.urls", namespace="stats_app")),
     path("accounts/", include("allauth.urls")),
     # Your stuff: custom urls includes go here
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
